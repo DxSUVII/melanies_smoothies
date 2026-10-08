@@ -1,3 +1,7 @@
+import streamlit as st
+import requests
+from snowflake.snowpark.functions import col
+
 st.header("SmoothieFroot Nutrition Information")
 
 smoothiefroot_response = requests.get(
