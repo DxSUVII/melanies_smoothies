@@ -1,38 +1,44 @@
 # Import python packages
 import streamlit as st
+import pandas as pd
 import requests
+
 from snowflake.snowpark.functions import col
 
-# Write directly to the app
+# App title
 st.title(f"Customize with your smoothies :cup_with_straw: {st.__version__}")
 
 st.write(
     """Choose the fruits you want in smoothie!"""
 )
 
-# Name input
+# Order name
 name_on_order = st.text_input("Name on Smoothie:")
 
 # Connect to Snowflake
 cnx = st.connection("snowflake")
 session = cnx.session()
 
-# Get fruit names from table
+# Get fruit options including SEARCH_ON
 my_dataframe = session.table(
     "smoothies.public.fruit_options"
-).select(col("FRUIT_NAME"))
+).select(
+    col("FRUIT_NAME"),
+    col("SEARCH_ON")
+)
 
-# Multi-select
+# Create pandas version
+pd_df = my_dataframe.to_pandas()
+
+# Multiselect uses only FRUIT_NAME
 ingredients = st.multiselect(
     "Choose up to 5 ingredients:",
-    my_dataframe,
+    pd_df["FRUIT_NAME"],
     max_selections=5
 )
 
-# Submit button
 time_to_insert = st.button("Submit Order")
 
-# Process selections
 if ingredients:
 
     ingredients_string = ""
@@ -41,15 +47,27 @@ if ingredients:
 
     for fruit_chosen in ingredients:
 
+        # Find SEARCH_ON value
+        search_on = pd_df.loc[
+            pd_df["FRUIT_NAME"] == fruit_chosen,
+            "SEARCH_ON"
+        ].iloc[0]
+
+        st.write(
+            "The search value for",
+            fruit_chosen,
+            "is",
+            search_on
+        )
+
         ingredients_string += fruit_chosen + " "
 
+        # API Call
         smoothiefroot_response = requests.get(
-            "https://my.smoothiefroot.com/api/fruit/watermelon"
+            "https://my.smoothiefroot.com/api/fruit/" + str(search_on).lower()
         )
 
         if smoothiefroot_response.status_code == 200:
-
-            st.subheader(fruit_chosen)
 
             st.dataframe(
                 data=smoothiefroot_response.json(),
@@ -59,9 +77,10 @@ if ingredients:
         else:
 
             st.error(
-                f"SmoothieFroot API unavailable. Status code: {smoothiefroot_response.status_code}"
+                f"SmoothieFroot API unavailable for {fruit_chosen}. Status code: {smoothiefroot_response.status_code}"
             )
 
+    st.write("Ingredients Selected:")
     st.write(ingredients_string)
 
     my_insert_stmt = """
