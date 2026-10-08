@@ -21,7 +21,6 @@ my_dataframe = session.table(
     "smoothies.public.fruit_options"
 ).select(col('FRUIT_NAME'))
 
-# Multiselect widget
 ingredients = st.multiselect(
     'Choose up to 5 ingredients:',
     my_dataframe,
@@ -30,7 +29,6 @@ ingredients = st.multiselect(
 
 time_to_insert = st.button('Submit Order')
 
-# Process selections
 if ingredients:
 
     ingredients_string = ''
@@ -49,7 +47,7 @@ if ingredients:
         session.sql(my_insert_stmt).collect()
         st.success(name_on_order + ', your Smoothie is ordered!', icon="✅")
 
-# New section to display SmoothieFroot nutrition information
+# SmoothieFroot API Section
 
 st.header("SmoothieFroot Nutrition Information")
 
@@ -57,4 +55,6 @@ smoothiefroot_response = requests.get(
     "https://my.smoothiefroot.com/api/fruit/watermelon"
 )
 
-st.text(smoothiefroot_response.json())
+st.write("Status Code:", smoothiefroot_response.status_code)
+st.write("Response Text:")
+st.text(smoothiefroot_response.text)
