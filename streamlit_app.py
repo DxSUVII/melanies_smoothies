@@ -38,4 +38,54 @@ ingredients = st.multiselect(
 )
 
 # Submit button
-time_to_insert = st.
+time_to_insert = st.button("Submit Order")
+
+if ingredients:
+
+    ingredients_string = ''
+
+    for fruit_chosen in ingredients:
+
+        ingredients_string += fruit_chosen + ' '
+
+        search_on = pd_df.loc[
+            pd_df['FRUIT_NAME'] == fruit_chosen,
+            'SEARCH_ON'
+        ].iloc[0]
+
+        st.subheader(fruit_chosen + ' Nutrition Information')
+
+        smoothiefroot_response = requests.get(
+            f"https://my.smoothiefroot.com/api/fruit/{search_on}"
+        )
+
+        if smoothiefroot_response.status_code == 200:
+
+            st.dataframe(
+                data=smoothiefroot_response.json(),
+                use_container_width=True
+            )
+
+        else:
+
+            st.error(
+                f"SmoothieFroot API unavailable. Status code: {smoothiefroot_response.status_code}"
+            )
+
+    st.write(ingredients_string)
+
+    my_insert_stmt = """
+        insert into smoothies.public.orders(name_on_order, ingredients)
+        values ('""" + name_on_order + """','""" + ingredients_string + """')
+    """
+
+    st.write(my_insert_stmt)
+
+    if time_to_insert:
+
+        session.sql(my_insert_stmt).collect()
+
+        st.success(
+            name_on_order + ', your Smoothie is ordered!',
+            icon="✅"
+        )
