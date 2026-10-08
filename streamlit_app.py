@@ -1,60 +1,15 @@
-# Import python packages
-import streamlit as st
-import requests
-from snowflake.snowpark.functions import col
-
-# Write directly to the app
-st.title(f"Customize with your smoothies :cup_with_straw: {st.__version__}")
-
-st.write(
-    """Choose the fruits you want in smoothie!"""
-)
-
-name_on_order = st.text_input("Name on Smoothie:")
-
-# Connect to Snowflake
-cnx = st.connection("snowflake")
-session = cnx.session()
-
-# Get fruit names from table
-my_dataframe = session.table(
-    "smoothies.public.fruit_options"
-).select(col('FRUIT_NAME'))
-
-ingredients = st.multiselect(
-    'Choose up to 5 ingredients:',
-    my_dataframe,
-    max_selections=5
-)
-
-time_to_insert = st.button('Submit Order')
-
-if ingredients:
-
-    ingredients_string = ''
-
-    for fruit_chosen in ingredients:
-        ingredients_string += fruit_chosen
-
-    st.write(ingredients_string)
-
-    my_insert_stmt = """ insert into smoothies.public.orders(name_on_order, ingredients)
-                    values ('""" + name_on_order + """','""" + ingredients_string + """')"""
-
-    st.write(my_insert_stmt)
-
-    if time_to_insert:
-        session.sql(my_insert_stmt).collect()
-        st.success(name_on_order + ', your Smoothie is ordered!', icon="✅")
-
-# SmoothieFroot API Section
-
 st.header("SmoothieFroot Nutrition Information")
 
 smoothiefroot_response = requests.get(
     "https://my.smoothiefroot.com/api/fruit/watermelon"
 )
 
-st.write("Status Code:", smoothiefroot_response.status_code)
-st.write("Response Text:")
-st.text(smoothiefroot_response.text)
+if smoothiefroot_response.status_code == 200:
+    sf_df = st.dataframe(
+        data=smoothiefroot_response.json(),
+        use_container_width=True
+    )
+else:
+    st.error(
+        f"SmoothieFroot API unavailable. Status code: {smoothiefroot_response.status_code}"
+    )
